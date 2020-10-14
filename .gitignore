@@ -1,0 +1,6 @@
+*.o
+test/
+test-answer/
+.vscode/
+lexer
+testself/
