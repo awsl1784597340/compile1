@@ -58,6 +58,7 @@ extern YYSTYPE seal_yylval;
 
 endline "\n"
 notation ("/*")[^"*/"]*("*/")
+badnotation "*/"
 var "var"
 int "Int"
 float "Float"
@@ -85,13 +86,13 @@ CONST_STRING2  ("\"")("\\\""|[^"])*("\"")
 
 
 Doubleflag     "&&"|"\|\|"|"=="|"!="|">="|"<="
-Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"|"&"|"!"|"\^"|"\|"
+
 
 CONST_FLOAT    ([1-9][0-9]*|0)\.[0-9]+
 CONST_INT10    [1-9][0-9]*|0
 CONST_INT16    0[xX][0-9a-fA-F]*
 
-
+Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"|"&"|"!"|"\^"|"\|"
 
 
 
@@ -108,6 +109,11 @@ CONST_INT16    0[xX][0-9a-fA-F]*
   for(;p[0]!='\0';++p){
     if (p[0]=='\n')curr_lineno++;
   }
+}
+
+{badnotation} {
+  strcpy(yylval.error_msg,"*/ is not matched");
+  return(ERROR);
 }
 
 {int} {seal_yylval.symbol=idtable.add_string(yytext); return(TYPEID);}
@@ -214,22 +220,22 @@ CONST_INT16    0[xX][0-9a-fA-F]*
   for(;p[1]!='\0';++p){
     if (p[0]=='\\'){
       p++;
-      if(p[0]=='\\')*string_buf_ptr++='\\';
-      else {if(p[0]=='\n'){*string_buf_ptr++='\n';curr_lineno++;}
-      else{ if(p[0]=='n'){strcpy(seal_yylval.error_msg, "end of line");return(ERROR);}
-      else *string_buf_ptr++=p[0];
-      }
+      switch(p[0]){
+        case '\\':*string_buf_ptr++='\\';break;
+        case '\n':*string_buf_ptr++='\n';curr_lineno++;break;
+        case 'n' :strcpy(seal_yylval.error_msg, "end of line");return(ERROR);
+        case '0' :strcpy(seal_yylval.error_msg, "String contains null character '\\0'");return(ERROR);
+        default  :*string_buf_ptr++=p[0];break;
       }
 }else{
-  if (p[0]=='\n'){strcpy(seal_yylval.error_msg, "end of line");return(ERROR);}
-  if (p[0]=='\0'){strcpy(seal_yylval.error_msg, "String contains null character '\\0'");return(ERROR);}
+  if (p[0]=='\n'){curr_lineno++;strcpy(seal_yylval.error_msg, "end of line! need '\\' !");return(ERROR);}
   *string_buf_ptr++=p[0];
 }
       
   }
   *string_buf_ptr='\0';
   if (string_buf_ptr >= string_buf + MAX_STR_CONST) {
-        strcpy(seal_yylval.error_msg, "TOO LONG");
+        strcpy(seal_yylval.error_msg, "THI STRING IS TOO LONG");
         return (ERROR);
     }
   seal_yylval.symbol=stringtable.add_string(string_buf);
