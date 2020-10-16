@@ -77,20 +77,23 @@ RETURN         "return"
 empty          [" "\t\b\f]
 
 CONST_BOOL     true|false
-CONST_FLOAT    [-+]?[0-9]*\.[0-9]+
-CONST_INT10    [-+]?[1-9][0-9]*|0
-CONST_INT16    [-+]?0[xX][0-9a-fA-F]*
+
 
 OBJECTIVE      [a-z][a-zA-Z0-9_]*
+CONST_STRING1  ("\`")("\\\`"|[^`])*("\`")
+CONST_STRING2  ("\"")("\\\""|[^"])*("\"")
+
 
 Doubleflag     "&&"|"\|\|"|"=="|"!="|">="|"<="
 Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"|"&"|"!"|"\^"|"\|"
 
-CONST_STRING1  "\`"
-CONST_STRING2  "\""
-CONST_STRING2  "\""("\\\""|[^"])"\""
+CONST_FLOAT    ([1-9][0-9]*|0)\.[0-9]+
+CONST_INT10    [1-9][0-9]*|0
+CONST_INT16    0[xX][0-9a-fA-F]*
 
-%s BACKSLASH BADEOF
+
+
+
 
 %%
 
@@ -135,6 +138,30 @@ CONST_STRING2  "\""("\\\""|[^"])"\""
   seal_yylval.symbol=floattable.add_string(yytext);
   return(CONST_FLOAT);
 }
+
+
+
+{Doubleflag} {
+  char *a = new char[2];
+  a[0]=yytext[0];
+  a[1]=yytext[1];
+
+  switch(a[0]){
+    case '&':return(AND); break;
+    case '|':return(OR);break;
+    case '=':return(EQUAL);break;
+    case '!':return(NE);break;
+    case '>':return(GE);break;
+    case '<':return(LE);break;
+
+  }
+}
+
+
+
+{Singleflag} {return(yytext[0]);} 
+
+
 {CONST_INT10} {
   seal_yylval.symbol=inttable.add_string(yytext);
   return(CONST_INT);
@@ -160,43 +187,16 @@ CONST_STRING2  "\""("\\\""|[^"])"\""
   return(CONST_INT);
 }
 
-
-{Doubleflag} {
-  char *a = new char[2];
-  a[0]=yytext[0];
-  a[1]=yytext[1];
-
-  switch(a[0]){
-    case '&':return(AND); break;
-    case '|':return(OR);break;
-    case '=':return(EQUAL);break;
-    case '!':return(NE);break;
-    case '>':return(GE);break;
-    case '<':return(LE);break;
-
-  }
-}
-
-
-
-{Singleflag} {return(yytext[0]);} 
-
-
 {OBJECTIVE} {
   seal_yylval.symbol=idtable.add_string(yytext);
   return(OBJECTID);}
 
 {CONST_STRING1} {
-  char c;
   string_buf_ptr = string_buf;
-  while((c=yyinput())!='`')
-  {if(c=='\n')curr_lineno++;
-  *string_buf_ptr++ = c;
-  // if(c==EOF){
-  //   BEGIN 0;
-  //   strcpy(seal_yylval.error_msg, "EOF in string"); 
-  //   return (ERROR);
-  // }
+    char *p=yytext+1;
+  for(;p[1]!='\0';++p){
+    if (p[0]=='\n')curr_lineno++;
+    *string_buf_ptr++=p[0];
   }
   *string_buf_ptr='\0';
   if (string_buf_ptr >= string_buf + MAX_STR_CONST) {
@@ -208,47 +208,35 @@ CONST_STRING2  "\""("\\\""|[^"])"\""
 }
 
 
-
 {CONST_STRING2} {
-    char c;
   string_buf_ptr = string_buf;
-  while((c=yyinput())!='\"')
-  {if(c=='\\'){BEGIN BACKSLASH;continue;}
-  *string_buf_ptr++ = c;
+    char *p=yytext+1;
+  for(;p[1]!='\0';++p){
+    if (p[0]=='\\'){
+      p++;
+      if(p[0]=='\\')*string_buf_ptr++='\\';
+      else {if(p[0]=='\n'){*string_buf_ptr++='\n';curr_lineno++;}
+      else{ if(p[0]=='n'){strcpy(seal_yylval.error_msg, "end of line");return(ERROR);}
+      else *string_buf_ptr++=p[0];
+      }
+      }
+}else{
+  if (p[0]=='\n'){strcpy(seal_yylval.error_msg, "end of line");return(ERROR);}
+  if (p[0]=='\0'){strcpy(seal_yylval.error_msg, "String contains null character '\\0'");return(ERROR);}
+  *string_buf_ptr++=p[0];
+}
+      
   }
   *string_buf_ptr='\0';
-    if (string_buf_ptr >= string_buf + MAX_STR_CONST) {
+  if (string_buf_ptr >= string_buf + MAX_STR_CONST) {
         strcpy(seal_yylval.error_msg, "TOO LONG");
         return (ERROR);
     }
   seal_yylval.symbol=stringtable.add_string(string_buf);
   return(CONST_STRING);
 }
-<BACKSLASH>'\n' {
-  curr_lineno++;
-  *string_buf_ptr++ = '\n';
-  BEGIN 0;
-}
-<BACKSLASH>'n' {
-  *string_buf_ptr++ = '\\';
-  *string_buf_ptr++ = 'n';
-  BEGIN 0;
-}
-<BACKSLASH>'\\' {
-  *string_buf_ptr++ = '\\';
-  *string_buf_ptr++ = '\\';
-  BEGIN 0;
-}
-<BACKSLASH>'0' {
-  strcpy(yylval.error_msg,"String contains null character '\\0'");
-  return(ERROR);
-  BEGIN 0;
-}
-<BACKSLASH>'t' {
-  *string_buf_ptr++ = '\\';
-  *string_buf_ptr++ = '\t';
-  BEGIN 0;
-}
+
+
 
 
 
