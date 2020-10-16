@@ -59,7 +59,7 @@ extern YYSTYPE seal_yylval;
 endline "\n"
 notation ("/*")[^"*/"]*("*/")
 badnotation1 "/*"[^"*/"]*
-badnotation2 "*/"
+
 var "var"
 int "Int"
 float "Float"
@@ -126,10 +126,7 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
   return(ERROR);
 }
 
-{badnotation2} {
-  strcpy(yylval.error_msg,"*/ is not matched");
-  return(ERROR);
-}
+
 
 {int} {seal_yylval.symbol=idtable.add_string(yytext); return(TYPEID);}
 {float} {seal_yylval.symbol=idtable.add_string(yytext); return(TYPEID);}
@@ -221,7 +218,7 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
   }
   *string_buf_ptr='\0';
   if (string_buf_ptr >= string_buf + MAX_STR_CONST) {
-        strcpy(seal_yylval.error_msg, "TOO LONG");
+        strcpy(seal_yylval.error_msg, "String constant too long");
         return (ERROR);
     }
   seal_yylval.symbol=stringtable.add_string(string_buf);
@@ -239,6 +236,8 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
         case '\\':*string_buf_ptr++='\\';break;
         case '\n':*string_buf_ptr++='\n';curr_lineno++;break;
         case 'n' :*string_buf_ptr++='\n';break;
+        case 't' :*string_buf_ptr++='\t';break;
+        case 'b' :*string_buf_ptr++='\b';break;
         case '0' :strcpy(seal_yylval.error_msg, "String contains null character '\\0'");return(ERROR);
         default  :*string_buf_ptr++=p[0];break;
       }
@@ -249,7 +248,7 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
   }
   *string_buf_ptr='\0';
   if (string_buf_ptr >= string_buf + MAX_STR_CONST) {
-        strcpy(seal_yylval.error_msg, "THI STRING IS TOO LONG");
+        strcpy(seal_yylval.error_msg, "String constant too long");
         return (ERROR);
     }
   seal_yylval.symbol=stringtable.add_string(string_buf);
