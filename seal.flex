@@ -83,7 +83,9 @@ CONST_BOOL     true|false
 
 OBJECTIVE      [a-z][a-zA-Z0-9_]*
 
-newbadSTRING   ("\"")("\\\""|"\\\n"|[^"\n])*[\n]
+newbadSTRING1   ("\`")[^`]*
+newbadSTRING2   ("\"")("\\\""|"\\\n"|[^"\n])*[\n]
+newbadSTRINGEOF ("\"")[^\"\n]*
 CONST_STRING1  ("\`")("\\\`"|[^`])*("\`")
 CONST_STRING2  ("\"")("\\\""|"\\\n"|[^\n\"])*("\"")
 
@@ -254,7 +256,17 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
   return(CONST_STRING);
 }
 
-{newbadSTRING} {
+
+{newbadSTRING1} {
+    char *p=yytext;
+  for(;p[0]!='\0';++p){
+    if (p[0]=='\n')curr_lineno++;
+  }
+  strcpy(seal_yylval.error_msg, "EOF in string constant");
+  return (ERROR);
+}
+
+{newbadSTRING2} {
     char *p=yytext;
   for(;p[0]!='\0';++p){
     if (p[0]=='\n')curr_lineno++;
@@ -263,6 +275,10 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
   return (ERROR);
 }
 
+{newbadSTRINGEOF} {
+  strcpy(seal_yylval.error_msg, "EOF in string constant");
+  return (ERROR);
+}
 
 
 
