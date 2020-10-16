@@ -213,6 +213,15 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
   return(OBJECTID);}
 
 {CONST_STRING1} {
+  char *string=yytext;
+  int i=0;
+  for (;string[0]!='\0';++string){
+    ++i;
+  }
+  if(i>258){
+    strcpy(seal_yylval.error_msg, "String constant too long");
+        return (ERROR);
+  }
   string_buf_ptr = string_buf;
     char *p=yytext+1;
   for(;p[1]!='\0';++p){
@@ -230,6 +239,15 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
 
 
 {CONST_STRING2} {
+    char *string=yytext;
+  int i=0;
+  for (;string[0]!='\0';++string){
+    ++i;
+  }
+  if(i>258){
+    strcpy(seal_yylval.error_msg, "String constant too long");
+        return (ERROR);
+  }
   string_buf_ptr = string_buf;
     char *p=yytext+1;
   for(;p[1]!='\0';++p){
