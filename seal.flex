@@ -83,6 +83,8 @@ CONST_BOOL     true|false
 OBJECTIVE      [a-z][a-zA-Z0-9_]*
 CONST_STRING1  ("\`")("\\\`"|[^`])*("\`")
 CONST_STRING2  ("\"")("\\\""|[^"])*("\"")
+CONST_STRING1   "\`"
+CONST_STRING2   "\""
 
 
 Doubleflag     "&&"|"\|\|"|"=="|"!="|">="|"<="
