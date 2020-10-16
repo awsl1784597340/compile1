@@ -57,8 +57,9 @@ extern YYSTYPE seal_yylval;
   */
 
 endline "\n"
-notation ("/*")[^"*/"]*("*/")
-badnotation1 "/*"[^"*/"]*
+notation "/*"([^\*]|(\*)*[^\*/])*(\*)*"*/" 
+notation1  "//"[^\n]*
+badnotation1 "/*"([^\*]|(\*)*[^\*/])*(\*)*
 
 var "var"
 int "Int"
@@ -116,6 +117,8 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
     if (p[0]=='\n')curr_lineno++;
   }
 }
+
+{notation1} { }
 
 {badnotation1} {
     char *p=yytext;
