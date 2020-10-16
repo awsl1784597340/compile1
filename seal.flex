@@ -35,7 +35,7 @@ extern FILE *fin; /* we read from this file */
 		YY_FATAL_ERROR( "read() in flex scanner failed");
 
 char string_buf[MAX_STR_CONST]; /* to assemble string constants */
-char *string_buf_ptr;
+char *string_buf_ptr;  
 
 extern int curr_lineno;
 extern int verbose_flag;
@@ -58,7 +58,8 @@ extern YYSTYPE seal_yylval;
 
 endline "\n"
 notation ("/*")[^"*/"]*("*/")
-badnotation "*/"
+badnotation1 "/*"[^"*/"]*
+badnotation2 "*/"
 var "var"
 int "Int"
 float "Float"
@@ -81,10 +82,11 @@ CONST_BOOL     true|false
 
 
 OBJECTIVE      [a-z][a-zA-Z0-9_]*
+
+newbadSTRING   ("\"")("\\\""|"\\\n"|[^"\n])*[\n]
 CONST_STRING1  ("\`")("\\\`"|[^`])*("\`")
-CONST_STRING2  ("\"")("\\\""|[^"])*("\"")
-CONST_STRING1   "\`"
-CONST_STRING2   "\""
+CONST_STRING2  ("\"")("\\\""|"\\\n"|[^\n\"])*("\"")
+
 
 
 Doubleflag     "&&"|"\|\|"|"=="|"!="|">="|"<="
@@ -113,7 +115,16 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
   }
 }
 
-{badnotation} {
+{badnotation1} {
+    char *p=yytext;
+  for(;p[0]!='\0';++p){
+    if (p[0]=='\n')curr_lineno++;
+  }
+  strcpy(yylval.error_msg,"EOF in comment");
+  return(ERROR);
+}
+
+{badnotation2} {
   strcpy(yylval.error_msg,"*/ is not matched");
   return(ERROR);
 }
@@ -225,15 +236,14 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
       switch(p[0]){
         case '\\':*string_buf_ptr++='\\';break;
         case '\n':*string_buf_ptr++='\n';curr_lineno++;break;
-        case 'n' :strcpy(seal_yylval.error_msg, "end of line");return(ERROR);
+        case 'n' :*string_buf_ptr++='\n';break;
         case '0' :strcpy(seal_yylval.error_msg, "String contains null character '\\0'");return(ERROR);
         default  :*string_buf_ptr++=p[0];break;
       }
 }else{
-  if (p[0]=='\n'){curr_lineno++;strcpy(seal_yylval.error_msg, "end of line! need '\\' !");return(ERROR);}
+  if (p[0]=='\n'){curr_lineno++;strcpy(seal_yylval.error_msg, "newline in quotation must use a '\\'");return(ERROR);}
   *string_buf_ptr++=p[0];
 }
-      
   }
   *string_buf_ptr='\0';
   if (string_buf_ptr >= string_buf + MAX_STR_CONST) {
@@ -242,6 +252,15 @@ Singleflag     "\+"|"/"|"-"|"\*"|"="|"<"|"~"|","|";"|":"|"("|")"|"{"|"}"|"%"|">"
     }
   seal_yylval.symbol=stringtable.add_string(string_buf);
   return(CONST_STRING);
+}
+
+{newbadSTRING} {
+    char *p=yytext;
+  for(;p[0]!='\0';++p){
+    if (p[0]=='\n')curr_lineno++;
+  }
+  strcpy(seal_yylval.error_msg, "newline in quotation must use a '\\'");
+  return (ERROR);
 }
 
 
